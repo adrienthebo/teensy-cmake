@@ -82,10 +82,6 @@ function(add_teensy_core TARGET_NAME)
         PROPERTIES COMPILE_FLAGS ${TARGET_FLAGS})
 endfunction()
 
-function(add_teensy_core_library TARGET_NAME)
-    add_teensy_core(${TARGET_NAME}_TeensyCor)
-endfunction()
-
 function(add_teensy_executable TARGET_NAME)
     # Determine the target flags for this executable.
 
@@ -119,5 +115,4 @@ function(add_teensy_executable TARGET_NAME)
                       DEPENDS ${TARGET_ELF}.eep ${TARGET_ELF}.hex)
 
     add_dependencies(${TARGET_NAME}_Firmware ${TARGET_NAME})
-
 endfunction()
