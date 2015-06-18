@@ -1,15 +1,15 @@
 # Copyright (c) 2015, Pierre-Andre Saulais <pasaulais@free.fr>
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 # 1. Redistributions of source code must retain the above copyright notice, this
-#    list of conditions and the following disclaimer. 
+#    list of conditions and the following disclaimer.
 # 2. Redistributions in binary form must reproduce the above copyright notice,
 #    this list of conditions and the following disclaimer in the documentation
 #    and/or other materials provided with the distribution.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,7 +32,7 @@ set(TEENSY_C_CORE_FILES
     ${TEENSY_ROOT}/usb_mem.c
     ${TEENSY_ROOT}/usb_dev.c
     ${TEENSY_ROOT}/usb_midi.c
-    ${TEENSY_ROOT}/usb_mouse.c 
+    ${TEENSY_ROOT}/usb_mouse.c
     ${TEENSY_ROOT}/usb_desc.c
     ${TEENSY_ROOT}/usb_keyboard.c
     ${TEENSY_ROOT}/usb_joystick.c
@@ -51,12 +51,12 @@ set(TEENSY_CXX_CORE_FILES
     ${TEENSY_ROOT}/main.cpp
     ${TEENSY_ROOT}/usb_inst.cpp
     ${TEENSY_ROOT}/yield.cpp
-    ${TEENSY_ROOT}/HardwareSerial1.cpp 
+    ${TEENSY_ROOT}/HardwareSerial1.cpp
     ${TEENSY_ROOT}/HardwareSerial2.cpp
     ${TEENSY_ROOT}/HardwareSerial3.cpp
     ${TEENSY_ROOT}/WMath.cpp
     ${TEENSY_ROOT}/Print.cpp
-    
+
     ${TEENSY_ROOT}/new.cpp
     ${TEENSY_ROOT}/usb_flightsim.cpp
     ${TEENSY_ROOT}/avr_emulation.cpp
@@ -69,94 +69,60 @@ set(TEENSY_CXX_CORE_FILES
     ${TEENSY_ROOT}/WString.cpp
 )
 
-macro(add_teensy_executable TARGET_NAME SOURCES)
-    # Determine the target flags for this executable.
-    set(USB_MODE_DEF)
-    if(${TEENSY_USB_MODE} STREQUAL SERIAL)
-        set(USB_MODE_DEF USB_SERIAL)
-    elseif(${TEENSY_USB_MODE} STREQUAL HID)
-        set(USB_MODE_DEF USB_HID)
-    elseif(${TEENSY_USB_MODE} STREQUAL SERIAL_HID)
-        set(USB_MODE_DEF USB_SERIAL_HID)
-    elseif(${TEENSY_USB_MODE} STREQUAL MIDI)
-        set(USB_MODE_DEF USB_MIDI)
-    elseif(${TEENSY_USB_MODE} STREQUAL RAWHID)
-        set(USB_MODE_DEF USB_RAWHID)
-    elseif(${TEENSY_USB_MODE} STREQUAL FLIGHTSIM)
-        set(USB_MODE_DEF USB_FLIGHTSIM)
-    else()
-        message(FATAL_ERROR "Invalid USB mode: ${TEENSY_USB_MODE}")
-    endif()
-    set(TARGET_FLAGS "-D${USB_MODE_DEF} -DF_CPU=${TEENSY_FREQUENCY}000000 ${TEENSY_FLAGS}")
-    set(TARGET_C_FLAGS "${TARGET_FLAGS} ${TEENSY_C_FLAGS}")
-    set(TARGET_CXX_FLAGS "${TARGET_FLAGS} ${TEENSY_CXX_FLAGS}")
-
-    # Build the Teensy 'core' library.
-    # Per-target because of preprocessor definitions.
-    add_library(${TARGET_NAME}_TeensyCore
+function(add_teensy_core TARGET_NAME)
+    add_library(${TARGET_NAME}
         ${TEENSY_C_CORE_FILES}
         ${TEENSY_CXX_CORE_FILES}
     )
-    set_source_files_properties(${TEENSY_C_CORE_FILES}
-        PROPERTIES COMPILE_FLAGS ${TARGET_C_FLAGS})
-    set_source_files_properties(${TEENSY_CXX_CORE_FILES}
-        PROPERTIES COMPILE_FLAGS ${TARGET_CXX_FLAGS})
 
-    set(FINAL_SOURCES ${TEENSY_LIB_SOURCES})
-    foreach(SOURCE ${SOURCES})
-        get_filename_component(SOURCE_EXT ${SOURCE} EXT)
-        get_filename_component(SOURCE_NAME ${SOURCE} NAME_WE)
-        get_filename_component(SOURCE_PATH ${SOURCE} REALPATH)
-        if((${SOURCE_EXT} STREQUAL .ino) OR (${SOURCE_EXT} STREQUAL .pde))
-            # Generate a stub C++ file from the Arduino sketch file.
-            set(GEN_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_NAME}.cpp")
-            set(TEMPLATE_FILE "${SOURCE}.in")
-            if(NOT EXISTS "${TEMPLATE_FILE}")
-                set(TEMPLATE_FILE "${CMAKE_SOURCE_DIR}/cmake/Arduino.inc.in")
-            endif()
-            configure_file("${TEMPLATE_FILE}" "${GEN_SOURCE}")
-            set(FINAL_SOURCES ${FINAL_SOURCES} ${GEN_SOURCE})
-        else()
-            set(FINAL_SOURCES ${FINAL_SOURCES} ${SOURCE})
-        endif()
-    endforeach(SOURCE ${SOURCES})
-    
-    # Add the Arduino library directory to the include path if found.
-    if(EXISTS ${ARDUINO_LIB_ROOT})
-        include_directories(${ARDUINO_LIB_ROOT})
-    endif(EXISTS ${ARDUINO_LIB_ROOT})
-    
+    set(USB_MODE_DEF USB_SERIAL)
+    set(TARGET_FLAGS "-D${USB_MODE_DEF} -DF_CPU=${TEENSY_FREQUENCY}000000 ${TEENSY_FLAGS}")
+
+    set_source_files_properties(${TEENSY_C_CORE_FILES}
+        PROPERTIES COMPILE_FLAGS ${TARGET_FLAGS})
+    set_source_files_properties(${TEENSY_CXX_CORE_FILES}
+        PROPERTIES COMPILE_FLAGS ${TARGET_FLAGS})
+endfunction()
+
+function(add_teensy_core_library TARGET_NAME)
+    add_teensy_core(${TARGET_NAME}_TeensyCor)
+endfunction()
+
+function(add_teensy_executable TARGET_NAME)
+    # Determine the target flags for this executable.
+
+    set(USB_MODE_DEF USB_SERIAL)
+    set(TARGET_FLAGS "-D${USB_MODE_DEF} -DF_CPU=${TEENSY_FREQUENCY}000000 ${TEENSY_FLAGS}")
+
     # Build the ELF executable.
-    add_executable(${TARGET_NAME} ${FINAL_SOURCES})
-    set_source_files_properties(${FINAL_SOURCES}
-        PROPERTIES COMPILE_FLAGS ${TARGET_CXX_FLAGS})
-    target_link_libraries(${TARGET_NAME} ${TARGET_NAME}_TeensyCore)
+    add_executable(${TARGET_NAME} ${ARGN})
+    set_source_files_properties(${ARGN}
+        PROPERTIES COMPILE_FLAGS ${TARGET_FLAGS})
     set_target_properties(${TARGET_NAME} PROPERTIES
         OUTPUT_NAME ${TARGET_NAME}
         SUFFIX ".elf"
     )
-    set(TARGET_ELF "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET_NAME}.elf")
-    
+
+    set(TARGET_ELF "${TARGET_NAME}.elf")
+
     # Generate the hex firmware files that can be flashed to the MCU.
     set(EEPROM_OPTS -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0)
     set(HEX_OPTS -O ihex -R .eeprom)
+
     add_custom_command(OUTPUT ${TARGET_ELF}.eep
                        COMMAND ${CMAKE_OBJCOPY} ${EEPROM_OPTS} ${TARGET_ELF} ${TARGET_ELF}.eep
-                       DEPENDS ${TARGET_ELF})
+                       DEPENDS ${TARGET_NAME})
+
     add_custom_command(OUTPUT ${TARGET_ELF}.hex
                        COMMAND ${CMAKE_OBJCOPY} ${HEX_OPTS} ${TARGET_ELF} ${TARGET_ELF}.hex
-                       DEPENDS ${TARGET_ELF})
+                       DEPENDS ${TARGET_NAME})
+
     add_custom_target(${TARGET_NAME}_Firmware ALL
                       DEPENDS ${TARGET_ELF}.eep ${TARGET_ELF}.hex)
+
     add_dependencies(${TARGET_NAME}_Firmware ${TARGET_NAME})
-    
-    if(EXISTS "${TY_EXECUTABLE}")
-        add_custom_target(${TARGET_NAME}_Upload
-                          DEPENDS ${TY_EXECUTABLE} ${TARGET_ELF}.hex
-                          COMMAND "${TY_EXECUTABLE}" upload ${TARGET_ELF}.hex)
-        add_dependencies(${TARGET_NAME}_Upload ${TARGET_NAME}_Firmware)
-    endif(EXISTS "${TY_EXECUTABLE}")
-endmacro(add_teensy_executable) 
+
+endfunction(add_teensy_executable)
 
 macro(import_arduino_library LIB_NAME)
     # Check if we can find the library.
@@ -167,10 +133,10 @@ macro(import_arduino_library LIB_NAME)
     if(NOT EXISTS "${LIB_DIR}")
         message(FATAL_ERROR "Could not find the directory for library '${LIB_NAME}'")
     endif(NOT EXISTS "${LIB_DIR}")
-    
+
     # Add it to the include path.
     include_directories("${LIB_DIR}")
-    
+
     # Mark source files to be built along with the sketch code.
     file(GLOB SOURCES_CPP ABSOLUTE "${LIB_DIR}" "${LIB_DIR}/*.cpp")
     foreach(SOURCE_CPP ${SOURCES_CPP})
