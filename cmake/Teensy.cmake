@@ -72,26 +72,19 @@ function(add_teensy_core TARGET_NAME)
         ${TEENSY_C_CORE_FILES}
         ${TEENSY_CXX_CORE_FILES}
     )
+endfunction()
 
-    set(USB_MODE_DEF USB_SERIAL)
-    set(TARGET_FLAGS "-D${USB_MODE_DEF} -DF_CPU=${TEENSY_FREQUENCY}000000 ${TEENSY_FLAGS}")
+function(add_teensy_library TARGET_NAME)
 
-    set_source_files_properties(${TEENSY_C_CORE_FILES}
-        PROPERTIES COMPILE_FLAGS ${TARGET_FLAGS})
-    set_source_files_properties(${TEENSY_CXX_CORE_FILES}
-        PROPERTIES COMPILE_FLAGS ${TARGET_FLAGS})
+    add_library(${TARGET_NAME} ${ARGN})
+    set_source_files_properties(${ARGN} PROPERTIES COMPILE_FLAGS "-include Arduino.h")
 endfunction()
 
 function(add_teensy_executable TARGET_NAME)
     # Determine the target flags for this executable.
 
-    set(USB_MODE_DEF USB_SERIAL)
-    set(TARGET_FLAGS "-D${USB_MODE_DEF} -DF_CPU=${TEENSY_FREQUENCY}000000 ${TEENSY_FLAGS}")
-
     # Build the ELF executable.
     add_executable(${TARGET_NAME} ${ARGN})
-    set_source_files_properties(${ARGN}
-        PROPERTIES COMPILE_FLAGS ${TARGET_FLAGS})
     set_target_properties(${TARGET_NAME} PROPERTIES
         OUTPUT_NAME ${TARGET_NAME}
         SUFFIX ".elf"
