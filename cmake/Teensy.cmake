@@ -75,13 +75,11 @@ function(add_teensy_core TARGET_NAME)
 endfunction()
 
 function(add_teensy_library TARGET_NAME)
-
     add_library(${TARGET_NAME} ${ARGN})
     set_source_files_properties(${ARGN} PROPERTIES COMPILE_FLAGS "-include Arduino.h")
 endfunction()
 
 function(add_teensy_executable TARGET_NAME)
-    # Determine the target flags for this executable.
 
     # Build the ELF executable.
     add_executable(${TARGET_NAME} ${ARGN})
@@ -89,6 +87,7 @@ function(add_teensy_executable TARGET_NAME)
         OUTPUT_NAME ${TARGET_NAME}
         SUFFIX ".elf"
     )
+    set_source_files_properties(${ARGN} PROPERTIES COMPILE_FLAGS "-include Arduino.h")
 
     set(TARGET_ELF "${TARGET_NAME}.elf")
 
